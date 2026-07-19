@@ -1,10 +1,10 @@
-*This project has been created as part of the 42 curriculum by <login1>[, <login2>[, <login3>[...]]].*
+*This project has been created as part of the 42 curriculum by rerandri, rirazafi.*
 
 # A-Maze-ing
 
 ## Description
 
-**A-Maze-ing** is a maze generation project developed in Python as part of the 42 curriculum.  
+**A-Maze-ing** is a maze generation project developed in Python as part of the 42 curriculum.
 The main goal is to design and implement a system capable of generating valid mazes while applying clean software architecture, algorithmic reasoning, and team collaboration practices.
 
 At a high level, the project:
@@ -48,8 +48,7 @@ make install
 
 ### Compilation
 
-No compilation is required for pure Python projects.  
-(If your project includes C extensions or build steps, document them here.)
+No compilation is required for pure Python projects.
 
 ### Execution
 
@@ -117,6 +116,11 @@ OUTPUT_FILE=maze.txt
 # ---- OPTIONAL ----
 PERFECT=true
 SEED=42
+
+# ---- BONUS ----
+ANIMATION=ON
+DELAY=0.01
+PATTERN=52
 ```
 
 ### Field Reference
@@ -151,8 +155,6 @@ We chose Recursive Backtracking because it:
 - Performs efficiently for typical project sizes.
 - Is easy to explain, debug, and extend in a pedagogical context.
 
-(If you used another algorithm, replace this section accordingly.)
-
 ---
 
 ## Reusable Parts of the Code
@@ -175,12 +177,11 @@ How to reuse:
 ## Team & Project Management
 
 ### Team Roles
+**Contrubitions:**
+- **rirazafi, rerandri** — Project coordination, core architecture
+- **rirazafi** — Data structures, config parsing, tests, algorithm integration, bonus part: controller by user.
+- **rerandri** — Rendering/output, documentation, tooling, bonus parts: pattern, delay, animation, benchmark(count-steps).
 
-- **<login1>** — Project coordination, core architecture, algorithm integration.
-- **<team_member_2>** — Data structures, config parsing, tests.
-- **<team_member_3>** — Rendering/output, documentation, tooling.
-
-(Adjust to your real team and contributions.)
 
 ### Planning: Initial vs Final
 
@@ -208,10 +209,10 @@ How to reuse:
 
 ### Tools Used
 
-- **GitHub** (version control, PR review, issue tracking)
+- **GitHub** (version control, PR review)
 - **Python virtual environment + pip**
-- **Linters/formatters** (e.g., `ruff`, `flake8`, `black`) *(if used)*
-- **Project board / task tracker** (GitHub Projects, Notion, Trello, etc.) *(if used)*
+- **Linters/formatters** (e.g., `mypy`, `mypy --strict .` and `flake8`) *(if used)*
+- **Project board** (GitHub Projects, Notion, etc.) *(if used)*
 
 ---
 
