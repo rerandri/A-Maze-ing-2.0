@@ -77,8 +77,8 @@ class AsciiRenderer:
 
     def _maze_fits(self) -> bool:
         term_cols, term_lines = shutil.get_terminal_size(fallback=(80, 24))
-        needed_cols = (self.maze.width * 2 + 1) * 2
-        needed_lines = self.maze.height * 2 + 1 + 2
+        needed_cols = self.maze.width * 2 + 1
+        needed_lines = self.maze.height * 2 + 1
         return term_cols >= needed_cols and term_lines >= needed_lines
 
     def _flush_render(self, pixels: list[list[str]]) -> None:
@@ -129,15 +129,15 @@ class AsciiRenderer:
             animate = self.animate_reveal
 
         if not self._maze_fits():
-            needed_cols = (self.maze.width * 2 + 1) * 2
-            needed_lines = self.maze.height * 2 + 1 + 2
+            needed_cols = self.maze.width * 2 + 1
+            needed_lines = self.maze.height * 2 + 1
             term_cols, term_lines = shutil.get_terminal_size(fallback=(80, 24))
             print(
                 Color.error(
                     f"Terminal too small"
                     f" ({term_cols}x{term_lines}) to display"
                     f" maze (needs {needed_cols}x{needed_lines})."
-                    "Resize and try again."
+                    " Resize and try again."
                 ),
                 flush=True,
             )
