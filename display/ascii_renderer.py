@@ -36,9 +36,9 @@ class AsciiRenderer:
         self.way = self.c.rgb(255, 105, 180) + "██" + self.c.end()
 
         self.blocked: str = self.c.rgb(255, 255, 0) + "██" + self.c.end()
-        self.path: str = self.c.rgb(0, 100, 255) + "██" + self.c.end()
-        self.start: str = self.c.rgb(0, 150, 255) + "██" + self.c.end()
-        self.end: str = self.c.rgb(255, 80, 80) + "██" + self.c.end()
+        self.path: str = self.c.rgb(0, 255, 0) + "██" + self.c.end()
+        self.start: str = self.c.rgb(100, 100, 255) + "██" + self.c.end()
+        self.end: str = self.c.rgb(255, 100, 100) + "██" + self.c.end()
 
     def _build_pixels(self) -> list[list[str]]:
         cols: int = self.maze.width * 2 + 1
@@ -392,7 +392,7 @@ def show_help() -> None:
         f"10. {'/delay <s> or /d <s>':<30}"
         " : Sets animation speed.\n"
         f"11. {'/info or /i':<30}"
-        " : Shows maze info.\n\n"
+        " : Shows maze info.\n"
         f"12. {'/setcolors or /sc':<30}"
         " : Sets custom colors.\n"
     )

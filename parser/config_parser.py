@@ -99,6 +99,8 @@ def _optional_delay(config: Mapping[str, object]) -> float:
     if isinstance(value, (int, float)):
         if value < 0:
             raise ValueError("DELAY cannot be negative.")
+        elif value > 0.1:
+            raise ValueError("DELAY cannot be greater than 0.1 seconds.")
         return float(value)
     if isinstance(value, str):
         try:

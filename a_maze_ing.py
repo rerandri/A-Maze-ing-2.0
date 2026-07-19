@@ -40,8 +40,8 @@ def main(argv: list[str] | None = None) -> None:
         output_lines: list[str] = [
             *maze.to_hex_lines(),
             "",
-            f"{maze.entry[0]},{maze.entry[1]}",
-            f"{maze.exit[0]},{maze.exit[1]}",
+            f"{maze.entry[0]},{maze.entry[1]} # entry (x, y)",
+            f"{maze.exit[0]},{maze.exit[1]} # exit (x, y)",
             "".join(solve.get_solution()),
         ]
         try:
