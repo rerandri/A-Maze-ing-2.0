@@ -1,15 +1,20 @@
+"""Entry point for the A-Maze-ing maze generator.
+
+Reads a configuration file, generates a maze, saves it to an output
+file, and launches the interactive ASCII renderer.
+"""
+
 import sys
 import os
 from display import AsciiRenderer
 from display.color import Color
 from mazegen import MazeGenerator
 from parser import read_config_file, parse_config
-from solve import Solve_bfs
 
 
 def main(argv: list[str] | None = None) -> None:
-    os.system('clear')
     """Generate a maze from a configuration file."""
+    os.system('clear')
     args = sys.argv if argv is None else argv
     if len(args) != 2:
         print(
@@ -34,26 +39,17 @@ def main(argv: list[str] | None = None) -> None:
             pattern_text=raw_config["PATTERN"],
         )
         maze.generate()
-        solve = Solve_bfs(maze)
-        solution = solve.get_solution()
-        step_count = len(solution)
+        solution = maze.solve()
         output_lines: list[str] = [
             *maze.to_hex_lines(),
             "",
-            f"{maze.entry[0]},{maze.entry[1]} # entry (x, y)",
-            f"{maze.exit[0]},{maze.exit[1]} # exit (x, y)",
-            "".join(solve.get_solution()),
+            f"{maze.entry[0]},{maze.entry[1]}",
+            f"{maze.exit[0]},{maze.exit[1]}",
+            "".join(solution),
         ]
         try:
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(output_lines) + "\n")
-            print(Color.info(
-                f"Generating maze with dimensions"
-                f" {maze.width}x{maze.height} ..."
-            ))
-            print(Color.info(
-                f"Solution found in {step_count} steps"
-            ))
             print(Color.success(
                 f"Maze generated and saved to '{output_file}'"
             ))

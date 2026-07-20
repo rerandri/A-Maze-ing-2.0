@@ -1,3 +1,19 @@
+"""Standalone maze generation module using recursive backtracking (DFS).
+
+Provides the ``MazeGenerator`` class that creates, solves, and exports
+mazes.  Uses only the Python standard library (``random``, ``sys``,
+``collections.deque``) so it can be reused in any Python 3.10+ project.
+
+Typical usage::
+
+    from mazegen import MazeGenerator
+
+    maze = MazeGenerator(width=20, height=15, entry=(0, 0), exit=(19, 14))
+    maze.generate()
+    solution = maze.solve()
+    hex_lines = maze.to_hex_lines()
+"""
+
 import random
 import sys
 
@@ -51,6 +67,20 @@ BITMAP_FONT: dict[str, list[str]] = {
 
 
 def text_to_pattern(text: str) -> list[str]:
+    """Convert plain text into a 5-row bitmap pattern.
+
+    Each character is looked up in ``BITMAP_FONT`` and the resulting
+    rows are concatenated with a single ``0``-column separator between
+    characters.
+
+    Args:
+        text: Any string (only ASCII letters, digits and a few
+            punctuation marks are supported; unknown chars are rendered
+            as blank space).
+
+    Returns:
+        A list of 5 strings, each representing one row of the bitmap.
+    """
     upper = text.upper()
     chars: list[list[str]] = []
     for char in upper:
@@ -70,6 +100,21 @@ def text_to_pattern(text: str) -> list[str]:
 
 
 class MazeGenerator:
+    """Random maze generator for perfect and Pac-Man (non-perfect) modes.
+
+    The generator uses a recursive-backtracker (DFS) to build a spanning
+    tree and optionally adds extra passages (loops) when ``perfect=False``.
+    A visible "42" pattern is embedded via fully closed cells.
+
+    Attributes:
+        width: Number of cells horizontally.
+        height: Number of cells vertically.
+        entry: ``(x, y)`` coordinates of the entrance.
+        exit: ``(x, y)`` coordinates of the exit.
+        grid: 2-D list of wall-bitmask values for every cell.
+        seed: Random seed used during generation (reproducible).
+        perfect: If ``True`` the maze has no loops (exactly one path).
+    """
     NORTH: int = 1
     EAST: int = 2
     SOUTH: int = 4
@@ -108,6 +153,21 @@ class MazeGenerator:
         show_pattern: bool = True,
         pattern_text: str = "42"
     ) -> None:
+        """Initialise the maze generator.
+
+        Args:
+            width: Number of cells horizontally (>= 2).
+            height: Number of cells vertically (>= 2).
+            entry: ``(x, y)`` entrance coordinates.
+            exit: ``(x, y)`` exit coordinates.
+            seed: Random seed for reproducible generation.  ``None``
+                picks a random seed automatically.
+            perfect: If ``True`` the generated maze will be perfect
+                (single path, no loops).  Default ``True``.
+            show_pattern: If ``True`` embed the "42" pattern.
+            pattern_text: Text to render as blocked cells
+                (default ``"42"``).
+        """
         self.width: int = width
         self.height: int = height
         self.entry: tuple[int, int] = entry
@@ -119,6 +179,7 @@ class MazeGenerator:
         self._generated: bool = False
         self._show_pattern: bool = show_pattern
         self._pattern: list[str] = text_to_pattern(pattern_text)
+        self._solution: list[str] = []
 
     def _init_grid(self) -> None:
         closed: int = self.NORTH | self.SOUTH | self.EAST | self.WEST
@@ -130,10 +191,12 @@ class MazeGenerator:
         x1: int, y1: int, wto_open1: int,
         x2: int, y2: int, wto_open2: int
     ) -> None:
+        """Remove a wall between two adjacent cells."""
         self.grid[y1][x1] &= ~wto_open1
         self.grid[y2][x2] &= ~wto_open2
 
     def _in_bounds(self, x: int, y: int) -> bool:
+        """Check if coordinates are within the grid."""
         return 0 <= x < self.width and 0 <= y < self.height
 
     def _require_generated(self) -> None:
@@ -144,6 +207,15 @@ class MazeGenerator:
             )
 
     def get_cell(self, x: int, y: int) -> int:
+        """Return the wall bitmask for the cell at ``(x, y)``.
+
+        Args:
+            x: Column index.
+            y: Row index.
+
+        Returns:
+            Integer bitmask (0-15) representing which walls are closed.
+        """
         self._require_generated()
         if not self._in_bounds(x, y):
             raise IndexError(
@@ -153,6 +225,16 @@ class MazeGenerator:
         return self.grid[y][x]
 
     def has_wall(self, x: int, y: int, direction: int) -> bool:
+        """Check whether a specific wall is present on a cell.
+
+        Args:
+            x: Column index.
+            y: Row index.
+            direction: One of ``NORTH``, ``EAST``, ``SOUTH``, ``WEST``.
+
+        Returns:
+            ``True`` if the wall is closed (present).
+        """
         if direction not in self.DELTA:
             valid = ", ".join(str(d) for d in self.DELTA)
             raise ValueError(
@@ -163,15 +245,37 @@ class MazeGenerator:
         return (cell & direction) != 0
 
     def _has_wall_internal(self, x: int, y: int, direction: int) -> bool:
+        """Check wall presence without bounds validation."""
         if not self._in_bounds(x, y):
             return True
         return (self.grid[y][x] & direction) != 0
 
     def to_hex_lines(self) -> list[str]:
+        """Export the grid as hexadecimal strings, one row per line.
+
+        Each cell is encoded as a single uppercase hex digit where:
+            - bit 0 (value 1) = wall on the North side
+            - bit 1 (value 2) = wall on the East  side
+            - bit 2 (value 4) = wall on the South side
+            - bit 3 (value 8) = wall on the West  side
+
+        A closed (present) wall is ``1``, an open (absent) wall is ``0``.
+
+        Returns:
+            A list of strings, one per grid row.
+        """
         self._require_generated()
         return ["".join(f"{cell:X}" for cell in row) for row in self.grid]
 
     def generate(self) -> None:
+        """Generate the maze grid.
+
+        The grid is first initialised with all walls closed, then a
+        recursive-backtracker (DFS) carves a spanning tree.  If
+        ``self.perfect`` is ``False`` extra passages are added to create
+        loops.  If ``self._show_pattern`` is ``True`` the "42" pattern
+        is embedded.
+        """
         self._init_grid()
         random.seed(self.seed)
         if self._show_pattern:
@@ -191,21 +295,56 @@ class MazeGenerator:
             self._add_extra_passages()
         self._generated = True
 
+    def solve(self) -> list[str]:
+        """Find the shortest path from ``entry`` to ``exit`` via BFS.
+
+        Returns:
+            A list of direction letters (``"N"``, ``"E"``, ``"S"``,
+            ``"W"``) describing the path from entry to exit.
+        """
+        from collections import deque
+        queue: deque[tuple[int, int]] = deque([self.entry])
+        parent: dict[tuple[int, int], tuple[tuple[int, int], int]] = {
+            self.entry: ((-1, -1), 0)
+        }
+        rev = {
+            self.NORTH: "N", self.EAST: "E",
+            self.SOUTH: "S", self.WEST: "W",
+        }
+
+        while queue:
+            x, y = queue.popleft()
+            if (x, y) == self.exit:
+                path: list[str] = []
+                curr = self.exit
+                while curr != self.entry:
+                    prev, direc = parent[curr]
+                    path.append(rev[direc])
+                    curr = prev
+                path.reverse()
+                self._solution = path
+                return path
+            for direc, (dx, dy) in self.DELTA.items():
+                nx, ny = x + dx, y + dy
+                if self._in_bounds(nx, ny) \
+                   and not self._has_wall_internal(x, y, direc) \
+                   and (nx, ny) not in parent:
+                    parent[(nx, ny)] = ((x, y), direc)
+                    queue.append((nx, ny))
+        return []
+
     def _carve_pattern42(self) -> None:
+        """Embed the pattern (e.g. "42") as blocked cells in the grid."""
         pattern_height = len(self._pattern)
         if pattern_height == 0:
             return
         pattern_width = len(self._pattern[0])
 
         if self.width < pattern_width or self.height < pattern_height:
-            from display.color import Color
-            print(
-                Color.warning(
-                    f"Maze too small ({self.width}x{self.height})"
-                    f" to embed '42' pattern"
-                    f" (needs {pattern_width}x{pattern_height})."
-                ),
-                file=sys.stderr,
+            sys.stderr.write(
+                f"Error: Maze too small ({self.width}x{self.height})"
+                f" to embed '42' pattern"
+                f" (needs {pattern_width}x{pattern_height}).\n"
             )
             return
 
@@ -220,6 +359,7 @@ class MazeGenerator:
                         self._blocked.add((x, y))
 
     def _generate_dfs(self) -> None:
+        """Carve the spanning tree using recursive-backtracker (DFS)."""
         stack: list[tuple[int, int]] = [self.entry]
         visited: set[tuple[int, int]] = {self.entry}
 
@@ -252,22 +392,65 @@ class MazeGenerator:
                 stack.pop()
 
     def _add_extra_passages(self) -> None:
+        self._open_special_cells()
+        self._carve_loops(min_loops=2)
+
+    def _open_special_cells(self) -> None:
+        """Open walls on special corner and centre cells to add loops."""
+        cells = [
+            (0, 0), (self.width - 1, 0),
+            (0, self.height - 1), (self.width - 1, self.height - 1),
+            (self.width // 2, self.height // 2),
+        ]
+        for cx, cy in cells:
+            if (cx, cy) in self._blocked:
+                self._blocked.remove((cx, cy))
+                self.grid[cy][cx] = 0
+            walls = [
+                (d, dx, dy) for d, (dx, dy) in self.DELTA.items()
+                if self._in_bounds(cx + dx, cy + dy)
+                and (cx + dx, cy + dy) not in self._blocked
+            ]
+            random.shuffle(walls)
+            opened = 0
+            for direction, dx, dy in walls:
+                if opened >= 2:
+                    break
+                nx, ny = cx + dx, cy + dy
+                if self._has_wall_internal(cx, cy, direction):
+                    self._remove_wall(
+                        cx, cy, direction,
+                        nx, ny, self.OPPOSITE[direction],
+                    )
+                    opened += 1
+                else:
+                    opened += 1
+
+    def _carve_loops(self, min_loops: int) -> None:
+        """Remove additional walls to create cycles in the maze."""
+        candidates: list[tuple[int, int, int, int, int]] = []
         for y in range(self.height):
             for x in range(self.width):
                 if (x, y) in self._blocked:
                     continue
-                directions = list(self.DELTA.items())
-                random.shuffle(directions)
-                for direction, (dx, dy) in directions:
+                for direction, (dx, dy) in self.DELTA.items():
                     nx, ny = x + dx, y + dy
-                    if (
-                        self._in_bounds(nx, ny)
-                        and (nx, ny) not in self._blocked
-                        and self._has_wall_internal(x, y, direction)
-                        and random.random() < 0.5
-                    ):
-                        self._remove_wall(
-                            x, y, direction,
-                            nx, ny, self.OPPOSITE[direction],
-                        )
-                    break
+                    if self._in_bounds(nx, ny) \
+                       and (nx, ny) not in self._blocked \
+                       and self._has_wall_internal(x, y, direction):
+                        candidates.append((x, y, direction, nx, ny))
+        random.shuffle(candidates)
+        loops = 0
+        seen: set[frozenset[tuple[int, int]]] = set()
+        for x, y, direction, nx, ny in candidates:
+            pair = frozenset([(x, y), (nx, ny)])
+            if pair in seen:
+                continue
+            self._remove_wall(
+                x, y, direction,
+                nx, ny, self.OPPOSITE[direction],
+            )
+            seen.add(pair)
+            loops += 1
+            if loops >= min_loops:
+                break

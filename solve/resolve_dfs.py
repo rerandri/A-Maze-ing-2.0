@@ -15,78 +15,53 @@ class Solve_bfs:
         WEST: (-1, 0),
     }
 
-    def __init__(self, Maze: MazeGenerator) -> None:
-        self.maze = Maze
-        self._solution: list[str] = []
-        self._visited_count: int = 0
+    def __init__(self, maze: MazeGenerator) -> None:
+        self.maze = maze
+        self._solution = maze.solve()
+        self._visited_count = 0
+        self._direction_counts: dict[str, int] = {}
+        self._direction_changes = 0
+        self._compute_stats()
 
-    def _solve_bfs(self) -> list[str]:
+    def _compute_stats(self) -> None:
         queue: deque[tuple[int, int]] = deque([self.maze.entry])
-        parent: dict[tuple[int, int], tuple[tuple[int, int], int]] = {
-            self.maze.entry: ((-1, -1), 0)
-        }
-
+        visited: set[tuple[int, int]] = {self.maze.entry}
         while queue:
             x, y = queue.popleft()
-
             if (x, y) == self.maze.exit:
-                self._visited_count = len(parent)
-                path: list[str] = []
-                curr = self.maze.exit
-                while curr != self.maze.entry:
-                    prev, direction = parent[curr]
-                    direction_names = {
-                        self.NORTH: "N",
-                        self.SOUTH: "S",
-                        self.EAST: "E",
-                        self.WEST: "W"
-                    }
-                    path.append(direction_names.get(direction, "_"))
-                    curr = prev
-                path.reverse()
-                self._solution = path
-                return self._solution
-
+                self._visited_count = len(visited)
+                break
             for direction, (dx, dy) in self.DELTA.items():
                 nx, ny = x + dx, y + dy
-                if (
-                    self.maze._in_bounds(nx, ny)
-                    and not self.maze._has_wall_internal(x, y, direction)
-                    and (nx, ny) not in parent
-                ):
-                    parent[(nx, ny)] = ((x, y), direction)
+                if self.maze._in_bounds(nx, ny) \
+                   and not self.maze._has_wall_internal(x, y, direction) \
+                   and (nx, ny) not in visited:
+                    visited.add((nx, ny))
                     queue.append((nx, ny))
-        self._visited_count = len(parent)
-        return self._solution
+        else:
+            self._visited_count = len(visited)
+
+        self._direction_counts = {"N": 0, "E": 0, "S": 0, "W": 0}
+        for move in self._solution:
+            if move in self._direction_counts:
+                self._direction_counts[move] += 1
+
+        self._direction_changes = 0
+        for i in range(1, len(self._solution)):
+            if self._solution[i] != self._solution[i - 1]:
+                self._direction_changes += 1
 
     def get_solution(self) -> list[str]:
-        solution_path: list[str] = self._solve_bfs()
-        return solution_path
+        return self._solution
 
     def get_step_count(self) -> int:
-        if not self._solution:
-            self._solve_bfs()
         return len(self._solution)
 
     def get_visited_count(self) -> int:
-        if not self._solution:
-            self._solve_bfs()
         return self._visited_count
 
     def get_direction_counts(self) -> dict[str, int]:
-        if not self._solution:
-            self._solve_bfs()
-        counts: dict[str, int] = {"N": 0, "E": 0, "S": 0, "W": 0}
-        for move in self._solution:
-            if move in counts:
-                counts[move] += 1
-        return counts
+        return self._direction_counts
 
     def get_direction_changes(self) -> int:
-        if not self._solution:
-            self._solve_bfs()
-        changes: int = 0
-        for i in range(1, len(self._solution)):
-            if self._solution[i] != self._solution[i - 1]:
-                changes += 1
-        return changes
+        return self._direction_changes

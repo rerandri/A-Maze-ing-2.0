@@ -1,32 +1,50 @@
+"""ANSI terminal colour utilities.
+
+Provides the ``Color`` class with methods to produce styled and 24-bit
+coloured strings for terminal output.
+"""
+
 import random
 
 
 class Color():
+    """Factory for ANSI-styled terminal strings.
+
+    Each method returns a string wrapped in the appropriate ANSI escape
+    sequence.  Nesting is supported.
+    """
     def rgb(self, r: int, g: int, b: int) -> str:
+        """Return an ANSI escape sequence for a 24-bit foreground colour."""
         return f"\033[38;2;{r};{g};{b}m"
 
     @staticmethod
     def end() -> str:
+        """Return the ANSI reset escape sequence."""
         return "\033[0m"
 
     @staticmethod
     def error(msg: str) -> str:
+        """Return a red bold error message string."""
         return f"\033[31;1mError: {msg}\033[0m"
 
     @staticmethod
     def warning(msg: str) -> str:
+        """Return a yellow bold warning message string."""
         return f"\033[33;1mWarning: {msg}\033[0m"
 
     @staticmethod
     def info(msg: str) -> str:
+        """Return a cyan bold info message string."""
         return f"\033[36;1m{msg}\033[0m"
 
     @staticmethod
     def success(msg: str) -> str:
+        """Return a green bold success message string."""
         return f"\033[32;1m{msg}\033[0m"
 
     @staticmethod
     def random_color() -> str:
+        """Return an ANSI escape sequence for a random foreground colour."""
         red: int = 0
         green: int = 0
         blue: int = 0
@@ -47,6 +65,7 @@ class Color():
         return f"\033[38;2;{red};{green};{blue}m"
 
     def get_comb(self) -> list[tuple[str, str]]:
+        """Return a list of colour combination tuples."""
         return [
             (self.rgb(255, 255, 0), self.rgb(0, 255, 255)),
             (self.rgb(255, 255, 0), self.rgb(0, 0, 0)),

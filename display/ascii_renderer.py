@@ -1,3 +1,9 @@
+"""Terminal-based ASCII renderer for mazes.
+
+The ``AsciiRenderer`` class draws the maze grid, entry/exit markers,
+the solution path, and provides an interactive menu.
+"""
+
 import random
 import select
 import shutil
@@ -11,6 +17,11 @@ from solve import Solve_bfs
 
 
 class AsciiRenderer:
+    """Interactive maze renderer for the terminal.
+
+    Handles all user interaction (menu, path display, colours, play
+    mode, benchmarks) and renders the maze as coloured ASCII art.
+    """
     ANIM_DURATION: float = 2.5
 
     def __init__(
@@ -19,6 +30,7 @@ class AsciiRenderer:
             delay: float = 0.0,
             animate_reveal: bool = True
     ) -> None:
+        """Initialise the renderer with a maze and solve it."""
         self.maze: MazeGenerator = maze
         self.delay: float = delay
 
@@ -33,8 +45,10 @@ class AsciiRenderer:
 
         self._last_render_lines: int = 0
         self.count_invalid_inputs: int = 0
+        self._force_display: bool = False
         self.show_path: bool = False
         self.animate_reveal: bool = animate_reveal
+        self.animate_path: bool = True
 
         self.c: Color = Color()
 
@@ -50,6 +64,7 @@ class AsciiRenderer:
         self.end: str = self.c.rgb(255, 00, 00) + "██" + self.c.end()
 
     def _build_pixels(self) -> list[list[str]]:
+        """Build a 2-D pixel grid representing the maze walls and corridors."""
         cols: int = self.maze.width * 2 + 1
         rows: int = self.maze.height * 2 + 1
         pixels: list[list[str]] = [
@@ -76,12 +91,14 @@ class AsciiRenderer:
         return pixels
 
     def _maze_fits(self) -> bool:
+        """Check whether the maze fits in the current terminal size."""
         term_cols, term_lines = shutil.get_terminal_size(fallback=(80, 24))
         needed_cols = self.maze.width * 2 + 1
         needed_lines = self.maze.height * 2 + 1
         return term_cols >= needed_cols and term_lines >= needed_lines
 
     def _flush_render(self, pixels: list[list[str]]) -> None:
+        """Write the pixel grid to stdout, reusing the cursor position."""
         output = "\n".join("".join(row) for row in pixels)
         preamble = "\033[H" if self._last_render_lines > 0 else ""
         sys.stdout.write(preamble + output + "\n\033[0J")
@@ -90,6 +107,7 @@ class AsciiRenderer:
 
     @staticmethod
     def _reveal_chunk_size(maze_width: int) -> int:
+        """Return the number of rows to reveal per animation step."""
         thresholds = [(130, 16), (100, 8), (80, 4), (60, 2), (40, 2)]
         for limit, chunk in thresholds:
             if maze_width >= limit:
@@ -97,6 +115,7 @@ class AsciiRenderer:
         return 1
 
     def _animate_reveal(self, pixels: list[list[str]]) -> None:
+        """Animate the maze appearing row by row from the centre."""
         total_rows = len(pixels)
         chunk = self._reveal_chunk_size(self.maze.width)
         center = total_rows // 2
@@ -124,11 +143,16 @@ class AsciiRenderer:
     def display(
         self, show_path: bool = False, animate: bool | None = None
     ) -> None:
+        """Render the maze grid in the terminal.
+
+        Shows walls, corridors, blocked cells, entry/exit markers and
+        optionally the solution path.
+        """
         self.show_path = show_path
         if animate is None:
             animate = self.animate_reveal
 
-        if not self._maze_fits():
+        if not self._maze_fits() and not self._force_display:
             needed_cols = self.maze.width * 2 + 1
             needed_lines = self.maze.height * 2 + 1
             term_cols, term_lines = shutil.get_terminal_size(fallback=(80, 24))
@@ -174,9 +198,9 @@ class AsciiRenderer:
                 pixels[2 * curr_y + 1][2 * curr_x] = self.path
                 curr_x -= 1
             pixels[2 * curr_y + 1][2 * curr_x + 1] = self.path
-            self._flush_render(pixels)
-            time.sleep(self.delay)
-
+            if self.animate_path:
+                self._flush_render(pixels)
+                time.sleep(self.delay)
         pixels[2 * exit_y + 1][2 * exit_x + 1] = self.end
         self._flush_render(pixels)
 
@@ -184,18 +208,22 @@ class AsciiRenderer:
         """Return user input, or None on interrupt."""
         path_on = '[ON]' if self.show_path else '[OFF]'
         anim_on = '[ON]' if self.animate_reveal else '[OFF]'
+        p_anim = '[ON]' if self.animate_path else '[OFF]'
         print("\n\033[1m=== A-Maze-ing ===\033[0m")
         print(
             f" [1].Re-generate maze\n"
-            f" [2].Display maze\n"
-            f" [3].Show path: {path_on}\n"
-            f" [4].Reveal animation: {anim_on}\n"
-            f" [5].Rotate maze colors\n"
-            f" [6].Cycle '42' pattern colors")
-        print(" [7].Quit")
-        print(" [8].Play maze")
-
-        print(self.c.info("\nType /help for more commands."))
+            f" [2].Show path: {path_on}\n"
+            f" [3].Rotate maze colors\n"
+            f" [4].Random color pattern\n"
+            f" [5].Display maze")
+        print(
+            f"\n [bonus]  [6].Path animation: {p_anim}\n"
+            f" [bonus]  [7].Reveal animation: {anim_on}\n"
+            f" [bonus]  [8].Bench\n"
+            f" [bonus]  [9].Play maze\n"
+            f" [bonus]  [10].Set colors")
+        print(
+            "\n [0].Exit          \033[36;1m/help\033[0m - More commands")
         try:
             print("\033[1mMaze>> \033[0m", end="", flush=True)
             return input().strip(' ')
@@ -204,6 +232,7 @@ class AsciiRenderer:
             return None
 
     def _handle_regenerate(self) -> None:
+        """Generate a new maze with a random seed and display it."""
         os.system('clear')
         self.maze.seed = random.randint(0, 2**32)
         self.maze._generated = False
@@ -220,23 +249,27 @@ class AsciiRenderer:
         self.display(show_path=self.show_path)
 
     def _handle_display(self) -> None:
+        """Clear and re-display the maze with the info header."""
         os.system('clear')
         self.display(show_path=self.show_path)
         self.header()
 
     def _handle_toggle_path(self) -> None:
+        """Toggle the solution path overlay on/off."""
         os.system('clear')
         self.show_path = not self.show_path
         self.display(show_path=self.show_path, animate=False)
         self.header()
 
     def _handle_toggle_animation(self) -> None:
+        """Toggle the reveal animation on/off."""
         os.system('clear')
         self.animate_reveal = not self.animate_reveal
         state = 'enabled' if self.animate_reveal else 'disabled'
         print(f"Reveal animation {state}.\n")
 
     def _handle_rotate_colors(self) -> None:
+        """Rotate the wall and corridor colour scheme."""
         os.system('clear')
         combinaison = self.c.get_comb()
         idx = random.randint(0, len(combinaison) - 1)
@@ -246,6 +279,7 @@ class AsciiRenderer:
         self.display(show_path=self.show_path, animate=False)
 
     def _handle_cycle_blocked(self) -> None:
+        """Cycle the blocked-cell colour to a random scheme."""
         os.system('clear')
         combinaison = self.c.get_comb()
         idx = random.randint(0, len(combinaison) - 1)
@@ -254,6 +288,7 @@ class AsciiRenderer:
         self.display(show_path=self.show_path, animate=False)
 
     def _handle_delay(self, value: str) -> None:
+        """Set the animation delay from a user-supplied string value."""
         print(Color.info(
             f"Setting animation delay... {value}"
         ))
@@ -274,13 +309,16 @@ class AsciiRenderer:
             print(Color.error("Invalid delay value. Enter a valid number.\n"))
 
     def _handle_clear(self) -> None:
+        """Clear the terminal screen."""
         os.system('clear')
 
     def _handle_help(self) -> None:
+        """Display the help screen."""
         os.system('clear')
         show_help()
 
     def _handle_info(self) -> None:
+        """Show the maze with the info header displayed below."""
         os.system('clear')
         temp_delay = self.delay
         if self.show_path:
@@ -290,14 +328,26 @@ class AsciiRenderer:
         self.header()
 
     def _handle_quit(self) -> bool:
+        """Print exit message and signal the main loop to stop."""
         print(Color.info(" ... Exiting Terminal Interface ...\n"))
         return True
 
     def _handle_set_colors(self) -> None:
-        os.system('clear')
+        """Interactively set custom colours for maze elements."""
         c = self.c
         succ = Color.success
 
+        def parse_rgb(prompt: str) -> tuple[int, int, int] | None:
+            raw = input(prompt).strip()
+            if not raw:
+                return None
+            parts = [x.strip() for x in raw.split(",")]
+            if len(parts) != 3:
+                print(f"│ {Color.error('Expected exactly 3 values: R, G, B')}")
+                return None
+            return (int(parts[0]), int(parts[1]), int(parts[2]))
+
+        os.system('clear')
         print(f"┌─── {c.info('Set Custom Colors')} " + "─" * 44)
         print("│")
         print(f"│ {c.info('=== Current Colors ===')}")
@@ -308,29 +358,33 @@ class AsciiRenderer:
         print("│ Examples:  255, 0, 0  =  Red    0, 255, 0  =  Green")
         print("│")
         try:
-            wall_str = input("│ Wall color (RGB): ")
-            self.wall = (
-                self.c.rgb(*map(int, wall_str.split(',')))
-                + "██" + self.c.end()
-            )
-            print(f"│ {succ('Wall color set.')}  {self.wall}")
+            wall_rgb = parse_rgb("│ Wall color (RGB): ")
+            if wall_rgb is not None:
+                self.wall = c.rgb(*wall_rgb) + "██" + c.end()
+                print(f"│ {succ('Wall color set.')}  {self.wall}")
             print("│")
-            blocked_str = input("│ Blocked color (RGB): ")
-            self.blocked = (
-                self.c.rgb(*map(int, blocked_str.split(',')))
-                + "██" + self.c.end()
-            )
-            print(f"│ {succ('Blocked color set.')}  {self.blocked}")
+            blocked_rgb = parse_rgb("│ Blocked color (RGB): ")
+            if blocked_rgb is not None:
+                self.blocked = c.rgb(*blocked_rgb) + "██" + c.end()
+                print(f"│ {succ('Blocked color set.')}  {self.blocked}")
             print("│")
-            print(f"│ {succ('Colors updated successfully.')}")
-        except (ValueError, IndexError) as e:
-            print(f"│ {Color.error(f'Invalid RGB format: {e}')}")
+            path_rgb = parse_rgb("│ Path color (RGB): ")
+            if path_rgb is not None:
+                self.way = c.rgb(*path_rgb) + "██" + c.end()
+                print(f"│ {succ('Path color set.')}  {self.way}")
+            if any(x is not None for x in (wall_rgb, blocked_rgb, path_rgb)):
+                print(f"│ {succ('Colors updated successfully.')}")
+            else:
+                print(f"│ {Color.info('No changes made.')}")
+        except ValueError:
+            print(f"│ {Color.error('Invalid RGB value. Use integers 0-255.')}")
         except Exception as e:
             print(f"│ {Color.error(f'Error: {e}')}")
         print("│")
         print("└" + "─" * 60)
 
     def _read_key(self) -> str:
+        """Read a single keypress, handling arrow escape sequences."""
         fd = sys.stdin.fileno()
         b = os.read(fd, 1)
         if not b:
@@ -354,6 +408,7 @@ class AsciiRenderer:
         return b.decode('utf-8', errors='replace')
 
     def _handle_play(self) -> None:
+        """Launch an interactive play mode with arrow-key navigation."""
         import tty
         import termios
 
@@ -487,10 +542,12 @@ class AsciiRenderer:
 
     @staticmethod
     def _build_bar(value: float, max_val: float, width: int = 24) -> str:
+        """Build a coloured progress bar string for benchmark display."""
         filled = int(min(value / max_val * width if max_val > 0 else 0, width))
         return "█" * filled + "░" * (width - filled)
 
     def _handle_benchmark(self) -> None:
+        """Display detailed maze statistics and performance benchmarks."""
         os.system('clear')
 
         seed = self.maze.seed
@@ -595,6 +652,7 @@ class AsciiRenderer:
         input(f"\n{c.info('Press Enter to return to menu...')}")
 
     def _handle_invalid(self) -> None:
+        """Handle an invalid menu choice and track consecutive errors."""
         if self.count_invalid_inputs >= 4:
             os.system('clear')
             self.count_invalid_inputs = 0
@@ -602,24 +660,40 @@ class AsciiRenderer:
         print(Color.error("Invalid choice.\n"))
 
     def run_iterative(self) -> None:
+        """Run the main interactive menu loop."""
         self.wall = self.c.random_color() + "██" + self.c.end()
 
         while True:
             answer = self._menu_prompt()
             if answer is None:
                 break
+            if answer.startswith("-f "):
+                self._force_display = True
+                self.display(show_path=self.show_path)
+                self._force_display = False
+                answer = answer.removeprefix("-f ").strip()
             if answer == "1":
                 self._handle_regenerate()
             elif answer == "2":
-                self._handle_display()
-            elif answer == "3":
                 self._handle_toggle_path()
-            elif answer == "4":
-                self._handle_toggle_animation()
-            elif answer == "5":
+            elif answer == "3":
                 self._handle_rotate_colors()
-            elif answer == "6":
+            elif answer == "4":
                 self._handle_cycle_blocked()
+            elif answer == "5":
+                self._handle_display()
+            elif answer == "6":
+                self.animate_path = not self.animate_path
+                status = "enabled" if self.animate_path else "disabled"
+                print(f"Path animation {status}.\n")
+            elif answer == "7":
+                self._handle_toggle_animation()
+            elif answer == "8":
+                self._handle_benchmark()
+            elif answer == "9":
+                self._handle_play()
+            elif answer == "10":
+                self._handle_set_colors()
             elif answer.startswith("/delay ") or answer.startswith("/d "):
                 delay_val = (
                     answer.removeprefix("/delay ")
@@ -632,22 +706,24 @@ class AsciiRenderer:
                 self._handle_help()
             elif answer in ("/info", "/i"):
                 self._handle_info()
-            elif answer in ("7", "quit", "exit"):
+            elif answer in ("0", "/quit", "quit", "/exit", "exit"):
                 if self._handle_quit():
                     break
-            elif answer in ("/setcolors", "/sc"):
-                self._handle_set_colors()
-            elif answer in ("8", "/play", "/p"):
+            elif answer in ("/play", "/p"):
                 self._handle_play()
             elif answer in ("/bench", "/b"):
                 self._handle_benchmark()
+            elif answer in ("/setcolors", "/sc"):
+                self._handle_set_colors()
             else:
                 self._handle_invalid()
 
     def header(self) -> None:
+        """Print the maze info header below the rendered grid."""
         enter = self.start
         exit = self.end
         path = self.path
+        delai_str = self.delay if self.animate_path else self.animate_path
         print(
             "\033[1mInfo for maze:\033[0m\n"
             f"Entry : {enter} | Exit : {exit} | Path : {path}"
@@ -655,27 +731,33 @@ class AsciiRenderer:
             f"Size : {self.maze.width} x {self.maze.height}\n"
             f"Steps to solve : {self._step_count}\n"
 
-            f"Animation delay : {self.delay}s"
+            f"Animation delay : {delai_str}s"
             f"\nReveal animation :"
             f" {'ON' if self.animate_reveal else 'OFF'}\n"
             f"Show path : {'ON' if self.show_path else 'OFF'}\n"
+            f"Path animation : {'ON' if self.animate_path else 'OFF'}\n"
         )
 
 
 def show_help() -> None:
+    """Print the full help screen to stdout."""
     os.system('clear')
     info = Color.info
     print(f"┌─── {info('A-Maze-ing Help')} " + "─" * 48)
     print("│")
     print(f"│ {info('=== Menu Options ===')}")
-    print("│   [1] Re-generate maze   Creates a new maze with random seed.")
-    print("│   [2] Display maze       Shows the current maze in terminal.")
-    print("│   [3] Show/Hide path     Toggles the solution path.")
-    print("│   [4] Toggle reveal animation  Enables or disables animation.")
-    print("│   [5] Rotate maze colors       Changes the wall color scheme.")
-    print("│   [6] Cycle '42' pattern       Changes blocked cell colors.")
-    print("│   [7] Quit               Exits the program.")
-    print("│   [8] Play maze          Navigate with arrow keys.")
+    print("│   [1] Re-generate maze     Creates a new maze with random seed.")
+    print("│   [2] Show path [ON/OFF]   Toggles the solution path display.")
+    print("│   [3] Rotate maze colors   Changes the wall color scheme.")
+    print("│   [4] Random color pattern Cycles blocked cell colors.")
+    print("│   [5] Display maze         Shows the current maze in terminal.")
+    print("│")
+    print(f"│ {info('=== Bonus Options ===')}")
+    print("│   [6] Path animation [ON/OFF]  Toggles step-by-step animation.")
+    print("│   [7] Reveal animation     Toggles the maze reveal animation.")
+    print("│   [8] Bench                Displays maze statistics.")
+    print("│   [9] Play maze            Navigate with arrow keys.")
+    print("│   [10] Set colors          Set custom colors for maze elements.")
     print("│")
     print(f"│ {info('=== Play Mode Controls ===')}")
     print("│   ↑ ↓ ← →      Move the player through the maze.")
@@ -686,11 +768,12 @@ def show_help() -> None:
     print(f"│ {info('=== Commands ===')}")
     print("│   /clear  /c       Clears the screen.")
     print("│   /help   /h       Shows this help screen.")
-    print("│   /delay <s>/d <s> Sets animation delay speed.")
-    print("│   /info   /i       Shows maze information and legend.")
-    print("│   /setcolors /sc   Sets custom colors for maze elements.")
-    print("│   /play   /p       Play the maze manually.")
-    print("│   /bench  /b       Maze statistics and benchmark.")
+    print("│   /quit   /exit    Exits the program.")
+    print("│   [bonus]  /delay <s> /d <s>  Sets animation delay speed.")
+    print("│   [bonus]  /info   /i         Shows maze information and legend.")
+    print("│   [bonus]  /setcolors /sc     Set custom maze element colors.")
+    print("│   [bonus]  /play   /p         Play the maze manually.")
+    print("│   [bonus]  /bench  /b         Maze statistics and benchmark.")
     print("│")
     print(f"│ {info('=== Color Reference (Color.rgb) ===')}")
     print("│   Color.rgb(R, G, B) sets a 24-bit terminal color.")

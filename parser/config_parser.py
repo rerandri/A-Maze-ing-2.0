@@ -1,7 +1,17 @@
+"""Configuration parser for the A-Maze-ing project.
+
+Validates and converts the raw key-value pairs from the config file
+into the types expected by ``MazeGenerator`` and ``AsciiRenderer``.
+"""
+
 from typing import Mapping, TypedDict
 
 
 class MazeConfig(TypedDict):
+    """Configuration namespace for maze parameters.
+
+    Stores all parsed settings with their correct Python types.
+    """
     WIDTH: int
     HEIGHT: int
     ENTRY: tuple[int, int]
@@ -117,6 +127,18 @@ def _optional_delay(config: Mapping[str, object]) -> float:
 
 
 def parse_config(config: Mapping[str, object]) -> MazeConfig:
+    """Parse raw config dict into a validated namespace.
+
+    Args:
+        raw: Dictionary of string key-value pairs from
+            ``read_config_file``.
+
+    Returns:
+        A ``MazeConfig`` instance with all fields populated.
+
+    Raises:
+        ValueError: If required keys are missing or values are invalid.
+    """
     width = _require_int(config, "WIDTH")
     height = _require_int(config, "HEIGHT")
 
@@ -151,7 +173,7 @@ def parse_config(config: Mapping[str, object]) -> MazeConfig:
 
     seed = _optional_seed(config)
     output_file = _optional_output_file(config)
-    perfect = config.get("PERFECT", True)
+    perfect = config.get("PERFECT", False)
     pattern = _optional_pattern(config)
     animation = _optional_animation(config)
     delay = _optional_delay(config)

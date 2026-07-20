@@ -1,7 +1,25 @@
+"""Low-level configuration file reader.
+
+Reads a simple ``KEY=VALUE`` file, skipping blank lines and ``#``-
+style comments.
+"""
+
 from typing import TextIO
 
 
 def _parse_line(line: str) -> tuple[str, object] | None:
+    """Parse a single ``KEY=VALUE`` line.
+
+    Args:
+        line: Raw line string (will be stripped).
+
+    Returns:
+        ``(key, value)`` tuple, or ``None`` if the line is blank
+        or a comment.
+
+    Raises:
+        ValueError: If the line does not contain ``=``.
+    """
     line = line.strip()
     if not line or line.startswith("#"):
         return None
@@ -41,6 +59,14 @@ def _parse_line(line: str) -> tuple[str, object] | None:
 
 
 def read_config_file(file_obj: TextIO) -> dict[str, object]:
+    """Read and parse a configuration file, returning key-value pairs.
+
+    Args:
+        file: An iterable of lines (e.g. an open file handle).
+
+    Returns:
+        A dict mapping config keys to their string values.
+    """
     config: dict[str, object] = {}
     for line in file_obj:
         parsed = _parse_line(line)
