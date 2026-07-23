@@ -1,19 +1,20 @@
 # ---- SIZE ----
-WIDTH=15
-HEIGHT=15
+WIDTH=10
+HEIGHT=10
 
 # ---- START ----
-ENTRY=2,1
-EXIT=1,8
+ENTRY=0,0
+EXIT=0,6
+
 
 # ---- OUTPUT FILE ----
 OUTPUT_FILE=maze.txt
 
 # ---- OPTIONAL ----
-#PERFECT=true
-SEED=42
+#PERFECT=False
+#SEED=42
 
 # ---- BONUS ----
 #ANIMATION=off
 #DELAY=0.03
-#PATTERN=1
+#PATTERN=5

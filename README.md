@@ -17,16 +17,21 @@ At a high level, the project:
 
 ## Features
 
-- Maze generation with a deterministic or random strategy.
+- Simultaneous maze generation and solving.
 - Config-driven setup (size, seed, optional display/output options).
 - Modular Python codebase with reusable logic.
 - Team-oriented development workflow.
-
-If advanced features are implemented, include them here:
-- Multiple maze generation algorithms (`Recursive Backtracking`, `Prim`, `Kruskal`, etc.).
-- Different display modes (ASCII, graphical, step-by-step).
+- Multiple maze generation algorithms (`DFS` (Depth-First Search), `BFS` (Breadth-First Search)).
+- Display mode (ASCII).
 - Configurable randomness seed for reproducibility.
 - Export to file / load from file.
+
+### Advanced features implemented (Bonus):
+- Extra interactive commands: /bench, /info, /clear, etc.
+- Custom pattern via config: PATTERN='string'
+- Custom maze colors: /setcolors or /sc
+- Animation delay: /delay <seconds>
+- Play mode: /play or /p
 
 ---
 
@@ -34,13 +39,13 @@ If advanced features are implemented, include them here:
 
 ### Prerequisites
 
-- Python 3.10+ (or your actual version)
+- Python 3.10+ (or later)
 - `pip` (Python package manager)
 
 ### Installation
 
 ```bash
-#A-Maze-ing
+# A-Maze-ing
 python3 -m venv .venv
 source .venv/bin/activate    # On Windows: .venv\Scripts\activate
 make install
@@ -147,12 +152,13 @@ PATTERN=Hello
 
 - `maze.width` *(int)*: Number of columns.
 - `maze.height` *(int)*: Number of rows.
-- `maze.algorithm` *(string)*: Selected generation algorithm.
-- `maze.seed` *(int | null)*: Random seed for reproducibility.
-- `display.mode` *(string)*: Display backend (`ascii`, `gui`, etc.).
-- `display.show_generation_steps` *(bool)*: Step-by-step rendering.
-- `output.save_to_file` *(bool)*: Enables export.
-- `output.file_path` *(string)*: Export destination.
+- `maze.seed` *(int | None)*: Random seed for reproducibility.
+- `maze.perfect` *(bool)*: Perfect (no loops) or imperfect maze.
+- `maze.entry` *(tuple[int, int])*: Entry coordinates.
+- `maze.exit` *(tuple[int, int])*: Exit coordinates.
+- `maze.to_hex_lines()` *() -> list[str]*: Export grid as hex strings.
+- `maze.get_cell(x, y)` *(int)*: Wall bitmask of a cell.
+- `maze.has_wall(x, y, direction)` *(bool)*: Check a wall direction.
 
 ---
 
@@ -188,6 +194,10 @@ standard library (``random``, ``sys``, ``collections.deque``).  It can be
 installed via pip and imported in any future project:
 
 ```bash
+# Install build
+pip install build
+python3 -m build
+
 # Install from the built wheel
 pip install dist/mazegen-1.0.0-py3-none-any.whl
 ```
@@ -222,25 +232,31 @@ has_north = maze.has_wall(x, y, maze.NORTH)
 - **Grid model**: 2-D list of wall bitmasks, accessible via ``get_cell()``.
 - **Wall utilities**: ``has_wall()``, ``_remove_wall()``, direction constants (``NORTH``, ``EAST``, ``SOUTH``, ``WEST``).
 - **Config loader/validator**: ``parser/`` module for reading ``KEY=VALUE`` files.
-- **Renderer/exporter**: ``display/ascii_renderer.py`` for terminal visualisation.
+- **Renderer/exporter**: ``display/ascii_renderer.py`` for terminal visualization.
 
 ---
 
 ## Team & Project Management
 
 ### Team Roles
-**Contrubitions:**
+**Contributions:**
 - **rirazafi, rerandri** — Project coordination, core architecture
-- **rirazafi** — Data structures, config parsing, tests, algorithm integration, bonus part: controller by user.
-- **rerandri** — Rendering/output, documentation, tooling, bonus parts: pattern, delay, animation, benchmark(count-steps).
+- **rirazafi** — Data structures, config parsing, tests, algorithm integration, bonus: play mode, benchmark (BFS/DFS stats).
+- **rerandri** — Rendering/output, documentation, tooling, tests, bonus: pattern, delay, animation, benchmark (step count).
 
 
 ### Planning: Initial vs Final
 
 **Initial plan**
 - Week 1: architecture + base data model
-- Week 2: algorithm implementation + validation
-- Week 3: rendering/output + polishing + README
+- Week 2: parsing
+- Week 3: DFS implementation + PERFECT
+- Week 4: BFS implementation + Error handling
+- Week 5: Display: Color (RGB), ASCII
+- Week 6: Bonus parts: Animation and DELAY + Benchmark (stats, step count)
+- Week 7: Bonus parts: Play mode
+- Week 8: Finalisation + README
+
 
 **How it evolved**
 - Added extra time for debugging edge cases (small grids, invalid config).
@@ -256,15 +272,16 @@ has_north = maze.has_wall(x, y, maze.NORTH)
 ### What Could Be Improved
 
 - Define coding conventions earlier.
-- Add CI checks sooner (lint/tests on every push).
+- Add CI (Continuous Integration) checks sooner (lint/tests on every push).
 - Allocate more time for benchmark/comparison across algorithms.
 
 ### Tools Used
 
 - **GitHub** (version control, PR review)
 - **Python virtual environment + pip**
-- **Linters/formatters** (e.g., `mypy`, `mypy --strict .` and `flake8`) *(if used)*
-- **Project board** (GitHub Projects, Notion, etc.) *(if used)*
+- **Linters/formatters** (e.g., `mypy`, `mypy --strict .` and `flake8`)
+- **Project board** (To Do, etc.)
+- **Stack Overflow** (Research, model parsing guidance)
 
 ---
 
@@ -280,8 +297,8 @@ has_north = maze.has_wall(x, y, maze.NORTH)
 ### Practical Tutorials / Documentation
 
 - Python docs: https://docs.python.org/3/
-- Network/graph concepts (if applicable): https://networkx.org/documentation/
-- CLI parsing (if using argparse): https://docs.python.org/3/library/argparse.html
+- Network/graph concepts: https://networkx.org/documentation/
+- CLI parsing: https://docs.python.org/3/library/argparse.html
 
 ### AI Usage Disclosure
 
@@ -291,6 +308,5 @@ AI tools were used to support:
 - Drafting test-case ideas and edge-case checklists.
 - Explaining and comparing generation algorithms during design discussions.
 
-AI was **not** used as a blind code replacement; all produced content was reviewed, adapted, and validated by the team.
-
 ---
+

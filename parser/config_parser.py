@@ -1,17 +1,8 @@
-"""Configuration parser for the A-Maze-ing project.
-
-Validates and converts the raw key-value pairs from the config file
-into the types expected by ``MazeGenerator`` and ``AsciiRenderer``.
-"""
-
 from typing import Mapping, TypedDict
 
 
 class MazeConfig(TypedDict):
-    """Configuration namespace for maze parameters.
-
-    Stores all parsed settings with their correct Python types.
-    """
+    """TypedDict describing the expected shape of a validated configuration."""
     WIDTH: int
     HEIGHT: int
     ENTRY: tuple[int, int]
@@ -25,6 +16,7 @@ class MazeConfig(TypedDict):
 
 
 def _require_int(config: Mapping[str, object], key: str) -> int:
+    """Get a mandatory integer key from the raw config."""
     if key not in config:
         raise ValueError(f"Missing required configuration key: '{key}'")
     value = config[key]
@@ -41,6 +33,7 @@ def _optional_point(
     key: str,
     default: tuple[int, int],
 ) -> tuple[int, int]:
+    """Get an optional (x, y) coordinate pair, falling back to *default*."""
     value = config.get(key, default)
     if (
         isinstance(value, tuple)
@@ -56,6 +49,7 @@ def _optional_point(
 
 
 def _optional_seed(config: Mapping[str, object]) -> int | None:
+    """Get the optional SEED value (int or None)."""
     value = config.get("SEED")
     if value is None or isinstance(value, int):
         return value
@@ -66,6 +60,7 @@ def _optional_seed(config: Mapping[str, object]) -> int | None:
 
 
 def _optional_output_file(config: Mapping[str, object]) -> str:
+    """Get the optional OUTPUT_FILE path (default: output_maze.txt)."""
     value = config.get("OUTPUT_FILE", "output_maze.txt")
     if isinstance(value, str):
         return value
@@ -76,6 +71,7 @@ def _optional_output_file(config: Mapping[str, object]) -> str:
 
 
 def _optional_pattern(config: Mapping[str, object]) -> str:
+    """Get the optional PATTERN text (default: '42')."""
     value = config.get("PATTERN", "42")
     if isinstance(value, str) and len(value) > 0:
         return value
@@ -86,6 +82,7 @@ def _optional_pattern(config: Mapping[str, object]) -> str:
 
 
 def _optional_animation(config: Mapping[str, object]) -> bool:
+    """Get the optional ANIMATION flag (ON/OFF/True/False, default False)."""
     value = config.get("ANIMATION", False)
     if isinstance(value, bool):
         return value
@@ -101,6 +98,7 @@ def _optional_animation(config: Mapping[str, object]) -> bool:
 
 
 def _optional_delay(config: Mapping[str, object]) -> float:
+    """Get the optional DELAY in seconds (default: 0.03, max 0.1)."""
     value = config.get("DELAY", 0.03)
     if isinstance(value, bool):
         raise TypeError(
@@ -127,18 +125,7 @@ def _optional_delay(config: Mapping[str, object]) -> float:
 
 
 def parse_config(config: Mapping[str, object]) -> MazeConfig:
-    """Parse raw config dict into a validated namespace.
-
-    Args:
-        raw: Dictionary of string key-value pairs from
-            ``read_config_file``.
-
-    Returns:
-        A ``MazeConfig`` instance with all fields populated.
-
-    Raises:
-        ValueError: If required keys are missing or values are invalid.
-    """
+    """Validate and normalise a raw config dict into a typed MazeConfig."""
     width = _require_int(config, "WIDTH")
     height = _require_int(config, "HEIGHT")
 

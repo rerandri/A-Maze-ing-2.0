@@ -1,50 +1,40 @@
-"""ANSI terminal colour utilities.
-
-Provides the ``Color`` class with methods to produce styled and 24-bit
-coloured strings for terminal output.
-"""
-
 import random
 
 
 class Color():
-    """Factory for ANSI-styled terminal strings.
-
-    Each method returns a string wrapped in the appropriate ANSI escape
-    sequence.  Nesting is supported.
-    """
+    """ANSI escape helpers for terminal colours and formatted messages."""
     def rgb(self, r: int, g: int, b: int) -> str:
-        """Return an ANSI escape sequence for a 24-bit foreground colour."""
+        """Return ANSI 24-bit foreground colour escape for (r, g, b)."""
         return f"\033[38;2;{r};{g};{b}m"
 
     @staticmethod
     def end() -> str:
-        """Return the ANSI reset escape sequence."""
+        """Return ANSI reset escape."""
         return "\033[0m"
 
     @staticmethod
     def error(msg: str) -> str:
-        """Return a red bold error message string."""
+        """Red bold 'Error: ' prefix + message."""
         return f"\033[31;1mError: {msg}\033[0m"
 
     @staticmethod
     def warning(msg: str) -> str:
-        """Return a yellow bold warning message string."""
+        """Yellow bold 'Warning: ' prefix + message."""
         return f"\033[33;1mWarning: {msg}\033[0m"
 
     @staticmethod
     def info(msg: str) -> str:
-        """Return a cyan bold info message string."""
+        """Cyan bold info message."""
         return f"\033[36;1m{msg}\033[0m"
 
     @staticmethod
     def success(msg: str) -> str:
-        """Return a green bold success message string."""
+        """Green bold success message."""
         return f"\033[32;1m{msg}\033[0m"
 
     @staticmethod
     def random_color() -> str:
-        """Return an ANSI escape sequence for a random foreground colour."""
+        """Return an ANSI escape for a random (non-dark) 24-bit colour."""
         red: int = 0
         green: int = 0
         blue: int = 0
@@ -65,7 +55,7 @@ class Color():
         return f"\033[38;2;{red};{green};{blue}m"
 
     def get_comb(self) -> list[tuple[str, str]]:
-        """Return a list of colour combination tuples."""
+        """Return a list of (wall, way) colour combinations for the maze."""
         return [
             (self.rgb(255, 255, 0), self.rgb(0, 255, 255)),
             (self.rgb(255, 255, 0), self.rgb(0, 0, 0)),

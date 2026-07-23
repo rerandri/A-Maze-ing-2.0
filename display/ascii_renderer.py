@@ -1,9 +1,3 @@
-"""Terminal-based ASCII renderer for mazes.
-
-The ``AsciiRenderer`` class draws the maze grid, entry/exit markers,
-the solution path, and provides an interactive menu.
-"""
-
 import random
 import select
 import shutil
@@ -18,10 +12,10 @@ from solve import Solve_bfs
 
 
 class AsciiRenderer:
-    """Interactive maze renderer for the terminal.
+    """Renders a MazeGenerator as coloured ASCII in the terminal.
 
-    Handles all user interaction (menu, path display, colours, play
-    mode, benchmarks) and renders the maze as coloured ASCII art.
+    Supports reveal animation, path overlay, play mode, benchmark stats,
+    and an interactive menu.
     """
     ANIM_DURATION: float = 2.5
 
@@ -31,7 +25,7 @@ class AsciiRenderer:
             delay: float = 0.0,
             animate_reveal: bool = False
     ) -> None:
-        """Initialise the renderer with a maze and solve it."""
+        """Initialise the renderer with a maze, optional delay and animation flag."""
         self.maze: MazeGenerator = maze
         self.delay: float = delay
 
@@ -64,7 +58,7 @@ class AsciiRenderer:
         self.end: str = self.c.rgb(255, 00, 00) + "██" + self.c.end()
 
     def _build_pixels(self) -> list[list[str]]:
-        """Build a 2-D pixel grid representing the maze walls and corridors."""
+        """Build a 2D pixel grid (walls, passages, blocked cells)."""
         cols: int = self.maze.width * 2 + 1
         rows: int = self.maze.height * 2 + 1
         pixels: list[list[str]] = [
@@ -91,14 +85,14 @@ class AsciiRenderer:
         return pixels
 
     def _maze_fits(self) -> bool:
-        """Check whether the maze fits in the current terminal size."""
+        """Check whether the maze fits the current terminal size."""
         term_cols, term_lines = shutil.get_terminal_size(fallback=(80, 24))
         needed_cols = self.maze.width * 2 + 1
         needed_lines = self.maze.height * 2 + 1
         return term_cols >= needed_cols and term_lines >= needed_lines
 
     def _flush_render(self, pixels: list[list[str]]) -> None:
-        """Write the pixel grid to stdout, reusing the cursor position."""
+        """Write the pixel grid to stdout, using ANSI escapes for smooth refresh."""
         output = "\n".join("".join(row) for row in pixels)
         preamble = "\033[H" if self._last_render_lines > 0 else ""
         sys.stdout.write(preamble + output + "\n\033[0J")
@@ -107,7 +101,7 @@ class AsciiRenderer:
 
     @staticmethod
     def _reveal_chunk_size(maze_width: int) -> int:
-        """Return the number of rows to reveal per animation step."""
+        """Return chunk size for reveal animation based on maze width."""
         thresholds = [(130, 16), (100, 8), (80, 4), (60, 2), (40, 2)]
         for limit, chunk in thresholds:
             if maze_width >= limit:
@@ -115,7 +109,7 @@ class AsciiRenderer:
         return 1
 
     def _animate_reveal(self, pixels: list[list[str]]) -> None:
-        """Animate the maze appearing row by row from the centre."""
+        """Animate the maze appearing from centre outward in chunks."""
         total_rows = len(pixels)
         chunk = self._reveal_chunk_size(self.maze.width)
         center = total_rows // 2
@@ -143,11 +137,7 @@ class AsciiRenderer:
     def display(
         self, show_path: bool = False, animate: bool | None = None
     ) -> None:
-        """Render the maze grid in the terminal.
-
-        Shows walls, corridors, blocked cells, entry/exit markers and
-        optionally the solution path.
-        """
+        """Render the maze with optional solution path and reveal animation."""
         self.show_path = show_path
         if animate is None:
             animate = self.animate_reveal
@@ -205,7 +195,7 @@ class AsciiRenderer:
         self._flush_render(pixels)
 
     def _menu_prompt(self) -> str | None:
-        """Return user input, or None on interrupt."""
+        """Display interactive menu and return the user's input."""
         path_on = '[ON]' if self.show_path else '[OFF]'
         anim_on = '[ON]' if self.animate_reveal else '[OFF]'
         p_anim = '[ON]' if self.animate_path else '[OFF]'
@@ -232,7 +222,7 @@ class AsciiRenderer:
             return None
 
     def _handle_regenerate(self) -> None:
-        """Generate a new maze with a random seed and display it."""
+        """Re-generate the maze with a new random seed."""
         subprocess.run(['clear'], check=True)
         self.maze.seed = random.randint(0, 2**32)
         self.maze._generated = False
@@ -249,27 +239,27 @@ class AsciiRenderer:
         self.display(show_path=self.show_path)
 
     def _handle_display(self) -> None:
-        """Clear and re-display the maze with the info header."""
+        """Display the maze."""
         subprocess.run(['clear'], check=True)
         self.display(show_path=self.show_path)
         self.header()
 
     def _handle_toggle_path(self) -> None:
-        """Toggle the solution path overlay on/off."""
+        """Toggle solution path visibility."""
         subprocess.run(['clear'], check=True)
         self.show_path = not self.show_path
         self.display(show_path=self.show_path, animate=False)
         self.header()
 
     def _handle_toggle_animation(self) -> None:
-        """Toggle the reveal animation on/off."""
+        """Toggle reveal animation on/off."""
         subprocess.run(['clear'], check=True)
         self.animate_reveal = not self.animate_reveal
         state = 'enabled' if self.animate_reveal else 'disabled'
         print(f"Reveal animation {state}.\n")
 
     def _handle_rotate_colors(self) -> None:
-        """Rotate the wall and corridor colour scheme."""
+        """Pick a random wall/way color combination."""
         subprocess.run(['clear'], check=True)
         combinaison = self.c.get_comb()
         idx = random.randint(0, len(combinaison) - 1)
@@ -279,7 +269,7 @@ class AsciiRenderer:
         self.display(show_path=self.show_path, animate=False)
 
     def _handle_cycle_blocked(self) -> None:
-        """Cycle the blocked-cell colour to a random scheme."""
+        """Pick a random color for blocked (pattern) cells."""
         subprocess.run(['clear'], check=True)
         combinaison = self.c.get_comb()
         idx = random.randint(0, len(combinaison) - 1)
@@ -288,7 +278,7 @@ class AsciiRenderer:
         self.display(show_path=self.show_path, animate=False)
 
     def _handle_delay(self, value: str) -> None:
-        """Set the animation delay from a user-supplied string value."""
+        """Set the path animation delay (in seconds)."""
         print(Color.info(
             f"Setting animation delay... {value}"
         ))
@@ -313,12 +303,12 @@ class AsciiRenderer:
         subprocess.run(['clear'], check=True)
 
     def _handle_help(self) -> None:
-        """Display the help screen."""
+        """Show the help screen."""
         subprocess.run(['clear'], check=True)
         show_help()
 
     def _handle_info(self) -> None:
-        """Show the maze with the info header displayed below."""
+        """Display maze information and colour legend."""
         subprocess.run(['clear'], check=True)
         temp_delay = self.delay
         if self.show_path:
@@ -328,12 +318,12 @@ class AsciiRenderer:
         self.header()
 
     def _handle_quit(self) -> bool:
-        """Print exit message and signal the main loop to stop."""
+        """Exit the interactive menu."""
         print(Color.info(" ... Exiting Terminal Interface ...\n"))
         return True
 
     def _handle_set_colors(self) -> None:
-        """Interactively set custom colours for maze elements."""
+        """Interactive custom colour picker for wall, blocked and path colours."""
         c = self.c
         succ = Color.success
 
@@ -384,7 +374,6 @@ class AsciiRenderer:
         print("└" + "─" * 60)
 
     def _read_key(self) -> str:
-        """Read a single keypress, handling arrow escape sequences."""
         fd = sys.stdin.fileno()
         b = os.read(fd, 1)
         if not b:
@@ -408,7 +397,7 @@ class AsciiRenderer:
         return b.decode('utf-8', errors='replace')
 
     def _handle_play(self) -> None:
-        """Launch an interactive play mode with arrow-key navigation."""
+        """Interactive play mode: navigate the maze with arrow keys."""
         import tty
         import termios
 
@@ -542,12 +531,12 @@ class AsciiRenderer:
 
     @staticmethod
     def _build_bar(value: float, max_val: float, width: int = 24) -> str:
-        """Build a coloured progress bar string for benchmark display."""
+        """Build a unicode progress bar (filled/empty)."""
         filled = int(min(value / max_val * width if max_val > 0 else 0, width))
         return "█" * filled + "░" * (width - filled)
 
     def _handle_benchmark(self) -> None:
-        """Display detailed maze statistics and performance benchmarks."""
+        """Display detailed maze statistics (generation, solution, topology)."""
         subprocess.run(['clear'], check=True)
 
         seed = self.maze.seed
@@ -652,7 +641,7 @@ class AsciiRenderer:
         input(f"\n{c.info('Press Enter to return to menu...')}")
 
     def _handle_invalid(self) -> None:
-        """Handle an invalid menu choice and track consecutive errors."""
+        """Handle invalid menu input; clear screen after 4 consecutive errors."""
         if self.count_invalid_inputs >= 4:
             subprocess.run(['clear'], check=True)
             self.count_invalid_inputs = 0
@@ -660,7 +649,7 @@ class AsciiRenderer:
         print(Color.error("Invalid choice.\n"))
 
     def run_iterative(self) -> None:
-        """Run the main interactive menu loop."""
+        """Main interactive loop: show menu and dispatch commands."""
         self.wall = self.c.random_color() + "██" + self.c.end()
 
         while True:
@@ -714,7 +703,7 @@ class AsciiRenderer:
                 self._handle_invalid()
 
     def header(self) -> None:
-        """Print the maze info header below the rendered grid."""
+        """Print maze info summary (entry, exit, size, steps, animation state)."""
         enter = self.start
         exit = self.end
         path = self.path
@@ -735,7 +724,7 @@ class AsciiRenderer:
 
 
 def show_help() -> None:
-    """Print the full help screen to stdout."""
+    """Display the full help screen with all commands and color reference."""
     subprocess.run(['clear'], check=True)
     info = Color.info
     print(f"┌─── {info('A-Maze-ing Help')} " + "─" * 48)

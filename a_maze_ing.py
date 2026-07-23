@@ -1,8 +1,3 @@
-"""Entry point for the A-Maze-ing maze generator.
-
-Reads a configuration file, generates a maze, saves it to an output
-file, and launches the interactive ASCII renderer.
-"""
 import sys
 import subprocess
 from display import AsciiRenderer
@@ -12,7 +7,7 @@ from parser import read_config_file, parse_config
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Generate a maze from a configuration file."""
+    """Entry point: parse config, generate maze, display it."""
     subprocess.run(['clear'], check=True)
     args = sys.argv if argv is None else argv
     if len(args) != 2:

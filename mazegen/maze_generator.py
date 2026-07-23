@@ -1,22 +1,5 @@
-"""Standalone maze generation module using recursive backtracking (DFS).
-
-Provides the ``MazeGenerator`` class that creates, solves, and exports
-mazes.  Uses only the Python standard library (``random``, ``sys``,
-``collections.deque``) so it can be reused in any Python 3.10+ project.
-
-Typical usage::
-
-    from mazegen import MazeGenerator
-
-    maze = MazeGenerator(width=20, height=15, entry=(0, 0), exit=(19, 14))
-    maze.generate()
-    solution = maze.solve()
-    hex_lines = maze.to_hex_lines()
-"""
-
 import random
 import sys
-
 
 BITMAP_FONT: dict[str, list[str]] = {
     "A": ["01110", "10001", "11111", "10001", "10001"],
@@ -68,20 +51,7 @@ BITMAP_FONT: dict[str, list[str]] = {
 
 
 def text_to_pattern(text: str) -> list[str]:
-    """Convert plain text into a 5-row bitmap pattern.
-
-    Each character is looked up in ``BITMAP_FONT`` and the resulting
-    rows are concatenated with a single ``0``-column separator between
-    characters.
-
-    Args:
-        text: Any string (only ASCII letters, digits and a few
-            punctuation marks are supported; unknown chars are rendered
-            as blank space).
-
-    Returns:
-        A list of 5 strings, each representing one row of the bitmap.
-    """
+    """Convert a text string into a 5-row bitmap pattern (list of str)."""
     upper = text.upper()
     chars: list[list[str]] = []
     for char in upper:
@@ -101,20 +71,10 @@ def text_to_pattern(text: str) -> list[str]:
 
 
 class MazeGenerator:
-    """Random maze generator for perfect and Pac-Man (non-perfect) modes.
+    """Generates and solves mazes using DFS-based recursive backtracking.
 
-    The generator uses a recursive-backtracker (DFS) to build a spanning
-    tree and optionally adds extra passages (loops) when ``perfect=False``.
-    A visible "42" pattern is embedded via fully closed cells.
-
-    Attributes:
-        width: Number of cells horizontally.
-        height: Number of cells vertically.
-        entry: ``(x, y)`` coordinates of the entrance.
-        exit: ``(x, y)`` coordinates of the exit.
-        grid: 2-D list of wall-bitmask values for every cell.
-        seed: Random seed used during generation (reproducible).
-        perfect: If ``True`` the maze has no loops (exactly one path).
+    Supports perfect (tree) and imperfect (loops) mazes, optional bitmap
+    pattern embedding, hex export, and BFS solution.
     """
     NORTH: int = 1
     EAST: int = 2
@@ -146,21 +106,7 @@ class MazeGenerator:
         show_pattern: bool = True,
         pattern_text: str = "42"
     ) -> None:
-        """Initialise the maze generator.
-
-        Args:
-            width: Number of cells horizontally (>= 2).
-            height: Number of cells vertically (>= 2).
-            entry: ``(x, y)`` entrance coordinates.
-            exit: ``(x, y)`` exit coordinates.
-            seed: Random seed for reproducible generation.  ``None``
-                picks a random seed automatically.
-            perfect: If ``True`` the generated maze will be perfect
-                (single path, no loops).  Default ``True``.
-            show_pattern: If ``True`` embed the "42" pattern.
-            pattern_text: Text to render as blocked cells
-                (default ``"42"``).
-        """
+        """Initialise maze dimensions, entry/exit, seed and pattern options."""
         self.width: int = width
         self.height: int = height
         self.entry: tuple[int, int] = entry
@@ -172,9 +118,11 @@ class MazeGenerator:
         self._generated: bool = False
         self._show_pattern: bool = show_pattern
         self._pattern: list[str] = text_to_pattern(pattern_text)
+        self._pattern_text: str = pattern_text
         self._solution: list[str] = []
 
     def _init_grid(self) -> None:
+        """Initialise the grid with all walls closed (bitmask 15)."""
         closed: int = self.NORTH | self.SOUTH | self.EAST | self.WEST
         self.grid = [[closed for _ in range(self.width)]
                      for _ in range(self.height)]
@@ -184,12 +132,12 @@ class MazeGenerator:
         x1: int, y1: int, wto_open1: int,
         x2: int, y2: int, wto_open2: int
     ) -> None:
-        """Remove a wall between two adjacent cells."""
+        """Remove walls between two adjacent cells by clearing direction bits."""
         self.grid[y1][x1] &= ~wto_open1
         self.grid[y2][x2] &= ~wto_open2
 
     def _in_bounds(self, x: int, y: int) -> bool:
-        """Check if coordinates are within the grid."""
+        """Check if (x, y) is within the maze grid."""
         return 0 <= x < self.width and 0 <= y < self.height
 
     def _require_generated(self) -> None:
@@ -200,15 +148,7 @@ class MazeGenerator:
             )
 
     def get_cell(self, x: int, y: int) -> int:
-        """Return the wall bitmask for the cell at ``(x, y)``.
-
-        Args:
-            x: Column index.
-            y: Row index.
-
-        Returns:
-            Integer bitmask (0-15) representing which walls are closed.
-        """
+        """Return the wall bitmask for cell (x, y)."""
         self._require_generated()
         if not self._in_bounds(x, y):
             raise IndexError(
@@ -218,16 +158,7 @@ class MazeGenerator:
         return self.grid[y][x]
 
     def has_wall(self, x: int, y: int, direction: int) -> bool:
-        """Check whether a specific wall is present on a cell.
-
-        Args:
-            x: Column index.
-            y: Row index.
-            direction: One of ``NORTH``, ``EAST``, ``SOUTH``, ``WEST``.
-
-        Returns:
-            ``True`` if the wall is closed (present).
-        """
+        """Return True if the wall in *direction* is still present at (x, y)."""
         if direction not in self.DELTA:
             valid = ", ".join(str(d) for d in self.DELTA)
             raise ValueError(
@@ -238,49 +169,31 @@ class MazeGenerator:
         return (cell & direction) != 0
 
     def _has_wall_internal(self, x: int, y: int, direction: int) -> bool:
-        """Check wall presence without bounds validation."""
         if not self._in_bounds(x, y):
             return True
         return (self.grid[y][x] & direction) != 0
 
     def to_hex_lines(self) -> list[str]:
-        """Export the grid as hexadecimal strings, one row per line.
-
-        Each cell is encoded as a single uppercase hex digit where:
-            - bit 0 (value 1) = wall on the North side
-            - bit 1 (value 2) = wall on the East  side
-            - bit 2 (value 4) = wall on the South side
-            - bit 3 (value 8) = wall on the West  side
-
-        A closed (present) wall is ``1``, an open (absent) wall is ``0``.
-
-        Returns:
-            A list of strings, one per grid row.
-        """
+        """Export the grid as hex-encoded strings (one per row)."""
         self._require_generated()
         return ["".join(f"{cell:X}" for cell in row) for row in self.grid]
 
     def generate(self) -> None:
-        """Generate the maze grid.
-
-        The grid is first initialised with all walls closed, then a
-        recursive-backtracker (DFS) carves a spanning tree.  If
-        ``self.perfect`` is ``False`` extra passages are added to create
-        loops.  If ``self._show_pattern`` is ``True`` the "42" pattern
-        is embedded.
-        """
+        """Generate the maze: carve pattern, run DFS, optionally add loops."""
         self._init_grid()
         random.seed(self.seed)
         if self._show_pattern:
             self._carve_pattern42()
         if self.entry in self._blocked:
             raise ValueError(
-                f"Entry point {self.entry} overlaps with the '42' pattern. "
+                f"Entry point {self.entry} overlaps with the "
+                f"'{self._pattern_text}' pattern. "
                 f"Choose a different entry position."
             )
         if self.exit in self._blocked:
             raise ValueError(
-                f"Exit point {self.exit} overlaps with the '42' pattern. "
+                f"Exit point {self.exit} overlaps with the "
+                f"'{self._pattern_text}' pattern. "
                 f"Choose a different exit position."
             )
         self._generate_dfs()
@@ -289,12 +202,7 @@ class MazeGenerator:
         self._generated = True
 
     def solve(self) -> list[str]:
-        """Find the shortest path from ``entry`` to ``exit`` via BFS.
-
-        Returns:
-            A list of direction letters (``"N"``, ``"E"``, ``"S"``,
-            ``"W"``) describing the path from entry to exit.
-        """
+        """BFS from entry to exit; returns a list of N/E/S/W directions."""
         from collections import deque
         queue: deque[tuple[int, int]] = deque([self.entry])
         parent: dict[tuple[int, int], tuple[tuple[int, int], int]] = {
@@ -327,7 +235,7 @@ class MazeGenerator:
         return []
 
     def _carve_pattern42(self) -> None:
-        """Embed the pattern (e.g. "42") as blocked cells in the grid."""
+        """Mark cells blocked by the bitmap pattern (centred on the grid)."""
         pattern_height = len(self._pattern)
         if pattern_height == 0:
             return
@@ -336,7 +244,7 @@ class MazeGenerator:
         if self.width < pattern_width or self.height < pattern_height:
             sys.stderr.write(
                 f"Error: Maze too small ({self.width}x{self.height})"
-                f" to embed '42' pattern"
+                f" to embed '{self._pattern_text}' pattern"
                 f" (needs {pattern_width}x{pattern_height}).\n"
             )
             return
@@ -352,7 +260,7 @@ class MazeGenerator:
                         self._blocked.add((x, y))
 
     def _generate_dfs(self) -> None:
-        """Carve the spanning tree using recursive-backtracker (DFS)."""
+        """Recursive backtracking (DFS) that carves the maze passage."""
         stack: list[tuple[int, int]] = [self.entry]
         visited: set[tuple[int, int]] = {self.entry}
 
@@ -385,12 +293,14 @@ class MazeGenerator:
                 stack.pop()
 
     def _add_extra_passages(self) -> None:
+        """Add loops and reduce dead-ends to create an imperfect maze."""
         self._open_special_cells()
         loop_target = max(5, self.width * self.height // 50)
         self._carve_loops(min_loops=loop_target)
         self._reduce_dead_ends(max_dead_ends=2)
 
     def _find_dead_ends(self) -> list[tuple[int, int]]:
+        """Return all degree-1 cells (three walls)."""
         dead_ends: list[tuple[int, int]] = []
         for y in range(self.height):
             for x in range(self.width):
@@ -401,6 +311,7 @@ class MazeGenerator:
         return dead_ends
 
     def _reduce_dead_ends(self, max_dead_ends: int = 2) -> None:
+        """Open walls to reduce dead-ends to at most *max_dead_ends*."""
         dead_ends = self._find_dead_ends()
         random.shuffle(dead_ends)
         for cx, cy in dead_ends:
@@ -417,11 +328,12 @@ class MazeGenerator:
                         break
 
     def _open_special_cells(self) -> None:
-        """Open walls on special corner and centre cells to add loops."""
+        """Open at least two walls from each corner cell."""
         cells = [
-            (0, 0), (self.width - 1, 0),
-            (0, self.height - 1), (self.width - 1, self.height - 1),
-            (self.width // 2, self.height // 2),
+            (0, 0),
+            (self.width - 1, 0),
+            (0, self.height - 1),
+            (self.width - 1, self.height - 1),
         ]
         for cx, cy in cells:
             if (cx, cy) in self._blocked:
@@ -447,7 +359,7 @@ class MazeGenerator:
                     opened += 1
 
     def _carve_loops(self, min_loops: int) -> None:
-        """Remove additional walls to create cycles in the maze."""
+        """Carve at least *min_loops* additional passages to form loops."""
         candidates: list[tuple[int, int, int, int, int]] = []
         for y in range(self.height):
             for x in range(self.width):

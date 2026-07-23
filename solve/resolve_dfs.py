@@ -3,6 +3,8 @@ from mazegen import MazeGenerator
 
 
 class Solve_bfs:
+    """BFS solver that computes the shortest path and traversal statistics."""
+
     NORTH: int = 1
     EAST: int = 2
     SOUTH: int = 4
@@ -16,6 +18,7 @@ class Solve_bfs:
     }
 
     def __init__(self, maze: MazeGenerator) -> None:
+        """Solve the maze and pre-compute direction/visit statistics."""
         self.maze = maze
         self._solution = maze.solve()
         self._visited_count = 0
@@ -24,6 +27,7 @@ class Solve_bfs:
         self._compute_stats()
 
     def _compute_stats(self) -> None:
+        """Count BFS-visited cells, direction breakdown, and direction changes."""
         queue: deque[tuple[int, int]] = deque([self.maze.entry])
         visited: set[tuple[int, int]] = {self.maze.entry}
         while queue:
@@ -52,16 +56,21 @@ class Solve_bfs:
                 self._direction_changes += 1
 
     def get_solution(self) -> list[str]:
+        """Return the list of N/E/S/W moves from entry to exit."""
         return self._solution
 
     def get_step_count(self) -> int:
+        """Return the number of steps in the solution."""
         return len(self._solution)
 
     def get_visited_count(self) -> int:
+        """Return how many cells BFS explored before finding the exit."""
         return self._visited_count
 
     def get_direction_counts(self) -> dict[str, int]:
+        """Return a dict mapping N/E/S/W to their frequency in the solution."""
         return self._direction_counts
 
     def get_direction_changes(self) -> int:
+        """Return how many times the direction changes along the solution."""
         return self._direction_changes
