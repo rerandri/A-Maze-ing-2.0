@@ -67,7 +67,8 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
     except OSError:
         print(
-            Color.error(f"Error on accessing Configuration file '{config_file}'"),
+            Color.error(
+                f"Error on accessing Configuration file '{config_file}'"),
             file=sys.stderr,
         )
         sys.exit(1)

@@ -3,6 +3,7 @@ import random
 
 class Color():
     """ANSI escape helpers for terminal colours and formatted messages."""
+
     def rgb(self, r: int, g: int, b: int) -> str:
         """Return ANSI 24-bit foreground colour escape for (r, g, b)."""
         return f"\033[38;2;{r};{g};{b}m"

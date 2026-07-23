@@ -25,7 +25,9 @@ class AsciiRenderer:
             delay: float = 0.0,
             animate_reveal: bool = False
     ) -> None:
-        """Initialise the renderer with a maze, optional delay and animation flag."""
+        """Initialise the renderer with a maze, optional
+        delay and animation flag.
+        """
         self.maze: MazeGenerator = maze
         self.delay: float = delay
 
@@ -92,7 +94,8 @@ class AsciiRenderer:
         return term_cols >= needed_cols and term_lines >= needed_lines
 
     def _flush_render(self, pixels: list[list[str]]) -> None:
-        """Write the pixel grid to stdout, using ANSI escapes for smooth refresh."""
+        """Write the pixel grid to stdout,
+        using ANSI escapes for smooth refresh."""
         output = "\n".join("".join(row) for row in pixels)
         preamble = "\033[H" if self._last_render_lines > 0 else ""
         sys.stdout.write(preamble + output + "\n\033[0J")
@@ -323,7 +326,7 @@ class AsciiRenderer:
         return True
 
     def _handle_set_colors(self) -> None:
-        """Interactive custom colour picker for wall, blocked and path colours."""
+        """Interactive colour picker for wall, blocked and path colours."""  # noqa: E501
         c = self.c
         succ = Color.success
 
@@ -536,7 +539,7 @@ class AsciiRenderer:
         return "█" * filled + "░" * (width - filled)
 
     def _handle_benchmark(self) -> None:
-        """Display detailed maze statistics (generation, solution, topology)."""
+        """Display detailed maze statistics (gen, solution, topology)."""
         subprocess.run(['clear'], check=True)
 
         seed = self.maze.seed
@@ -641,7 +644,7 @@ class AsciiRenderer:
         input(f"\n{c.info('Press Enter to return to menu...')}")
 
     def _handle_invalid(self) -> None:
-        """Handle invalid menu input; clear screen after 4 consecutive errors."""
+        """Handle invalid input; clear screen after 4 consecutive errors."""
         if self.count_invalid_inputs >= 4:
             subprocess.run(['clear'], check=True)
             self.count_invalid_inputs = 0
@@ -703,7 +706,7 @@ class AsciiRenderer:
                 self._handle_invalid()
 
     def header(self) -> None:
-        """Print maze info summary (entry, exit, size, steps, animation state)."""
+        """Print maze info summary (entry, exit, size, steps, anim state)."""
         enter = self.start
         exit = self.end
         path = self.path

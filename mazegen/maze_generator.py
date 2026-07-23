@@ -132,7 +132,7 @@ class MazeGenerator:
         x1: int, y1: int, wto_open1: int,
         x2: int, y2: int, wto_open2: int
     ) -> None:
-        """Remove walls between two adjacent cells by clearing direction bits."""
+        """Remove walls between two adjacent cells by clearing dir bits."""
         self.grid[y1][x1] &= ~wto_open1
         self.grid[y2][x2] &= ~wto_open2
 
@@ -158,7 +158,7 @@ class MazeGenerator:
         return self.grid[y][x]
 
     def has_wall(self, x: int, y: int, direction: int) -> bool:
-        """Return True if the wall in *direction* is still present at (x, y)."""
+        """Return True if wall in *direction* is still present at (x, y)."""
         if direction not in self.DELTA:
             valid = ", ".join(str(d) for d in self.DELTA)
             raise ValueError(

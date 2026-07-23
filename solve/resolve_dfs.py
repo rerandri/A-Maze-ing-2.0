@@ -27,7 +27,7 @@ class Solve_bfs:
         self._compute_stats()
 
     def _compute_stats(self) -> None:
-        """Count BFS-visited cells, direction breakdown, and direction changes."""
+        """Count BFS-visited cells, direction breakdown, and changes."""
         queue: deque[tuple[int, int]] = deque([self.maze.entry])
         visited: set[tuple[int, int]] = {self.maze.entry}
         while queue:

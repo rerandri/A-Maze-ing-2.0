@@ -2,7 +2,7 @@ from typing import TextIO
 
 
 def _parse_line(line: str) -> tuple[str, object] | None:
-    """Parse a single KEY=VALUE line, returning (key, value) or None if blank/comment."""
+    """Parse a KEY=VALUE line returning (key, value) or None."""
     line = line.strip()
     if not line or line.startswith("#"):
         return None
@@ -42,7 +42,7 @@ def _parse_line(line: str) -> tuple[str, object] | None:
 
 
 def read_config_file(file_obj: TextIO) -> dict[str, object]:
-    """Read a config file stream into a raw dict (keys uppercased, values typed)."""
+    """Read config file into dict (keys uppercased, values typed)."""
     config: dict[str, object] = {}
     for line in file_obj:
         parsed = _parse_line(line)
