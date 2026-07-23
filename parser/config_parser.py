@@ -86,7 +86,7 @@ def _optional_pattern(config: Mapping[str, object]) -> str:
 
 
 def _optional_animation(config: Mapping[str, object]) -> bool:
-    value = config.get("ANIMATION", True)
+    value = config.get("ANIMATION", False)
     if isinstance(value, bool):
         return value
     if isinstance(value, str):

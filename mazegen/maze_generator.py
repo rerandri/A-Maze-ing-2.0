@@ -63,6 +63,7 @@ BITMAP_FONT: dict[str, list[str]] = {
     "-": ["00000", "00000", "11111", "00000", "00000"],
     "_": ["00000", "00000", "00000", "00000", "11111"],
     "#": ["01010", "11111", "01010", "11111", "01010"],
+    "": ["00000", "00000", "00000", "00000", "00000"],
 }
 
 
@@ -119,14 +120,6 @@ class MazeGenerator:
     EAST: int = 2
     SOUTH: int = 4
     WEST: int = 8
-
-    PATTERN_42: list[str] = [
-        "F000FFF",
-        "F00000F",
-        "FFF0FFF",
-        "00F0F00",
-        "00F0FFF",
-    ]
 
     OPPOSITE: dict[int, int] = {
         NORTH: SOUTH,
@@ -393,7 +386,35 @@ class MazeGenerator:
 
     def _add_extra_passages(self) -> None:
         self._open_special_cells()
-        self._carve_loops(min_loops=2)
+        loop_target = max(5, self.width * self.height // 50)
+        self._carve_loops(min_loops=loop_target)
+        self._reduce_dead_ends(max_dead_ends=2)
+
+    def _find_dead_ends(self) -> list[tuple[int, int]]:
+        dead_ends: list[tuple[int, int]] = []
+        for y in range(self.height):
+            for x in range(self.width):
+                if (x, y) in self._blocked:
+                    continue
+                if bin(self.grid[y][x]).count('1') == 3:
+                    dead_ends.append((x, y))
+        return dead_ends
+
+    def _reduce_dead_ends(self, max_dead_ends: int = 2) -> None:
+        dead_ends = self._find_dead_ends()
+        random.shuffle(dead_ends)
+        for cx, cy in dead_ends:
+            if len(self._find_dead_ends()) <= max_dead_ends:
+                break
+            for direction, (dx, dy) in self.DELTA.items():
+                nx, ny = cx + dx, cy + dy
+                if self._in_bounds(nx, ny) and (nx, ny) not in self._blocked:
+                    if self._has_wall_internal(cx, cy, direction):
+                        self._remove_wall(
+                            cx, cy, direction,
+                            nx, ny, self.OPPOSITE[direction],
+                        )
+                        break
 
     def _open_special_cells(self) -> None:
         """Open walls on special corner and centre cells to add loops."""
@@ -405,7 +426,6 @@ class MazeGenerator:
         for cx, cy in cells:
             if (cx, cy) in self._blocked:
                 self._blocked.remove((cx, cy))
-                self.grid[cy][cx] = 0
             walls = [
                 (d, dx, dy) for d, (dx, dy) in self.DELTA.items()
                 if self._in_bounds(cx + dx, cy + dy)

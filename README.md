@@ -123,8 +123,8 @@ Example (`config.txt`):
 
 ```txt
 # ---- SIZE ----
-WIDTH=30
-HEIGHT=30
+WIDTH=50
+HEIGHT=50
 
 # ---- ENTRY / EXIT ----
 ENTRY=29,1
@@ -139,8 +139,8 @@ SEED=42             # reproducibility
 
 # ---- BONUS ----
 ANIMATION=ON
-DELAY=0.01
-PATTERN=52
+DELAY=0.03
+PATTERN=Hello
 ```
 
 ### Field Reference

@@ -119,7 +119,6 @@ class Color():
             (self.rgb(255, 218, 185), self.rgb(255, 165, 0)),
             (self.rgb(112, 224, 208), self.rgb(0, 0, 128)),
             (self.rgb(250, 128, 114), self.rgb(0, 0, 128)),
-            (self.rgb(255, 0, 255), self.rgb(255, 0, 255)),
             (self.rgb(0, 128, 0), self.rgb(255, 0, 255)),
             (self.rgb(4, 139, 154), self.rgb(64, 224, 208)),
             (self.rgb(4, 139, 154), self.rgb(128, 128, 128)),

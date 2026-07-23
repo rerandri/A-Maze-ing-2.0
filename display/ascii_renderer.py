@@ -9,6 +9,7 @@ import select
 import shutil
 import sys
 import os
+import subprocess
 import time
 
 from .color import Color
@@ -28,7 +29,7 @@ class AsciiRenderer:
             self,
             maze: MazeGenerator,
             delay: float = 0.0,
-            animate_reveal: bool = True
+            animate_reveal: bool = False
     ) -> None:
         """Initialise the renderer with a maze and solve it."""
         self.maze: MazeGenerator = maze
@@ -45,10 +46,9 @@ class AsciiRenderer:
 
         self._last_render_lines: int = 0
         self.count_invalid_inputs: int = 0
-        self._force_display: bool = False
         self.show_path: bool = False
         self.animate_reveal: bool = animate_reveal
-        self.animate_path: bool = True
+        self.animate_path: bool = False
 
         self.c: Color = Color()
 
@@ -152,7 +152,7 @@ class AsciiRenderer:
         if animate is None:
             animate = self.animate_reveal
 
-        if not self._maze_fits() and not self._force_display:
+        if not self._maze_fits():
             needed_cols = self.maze.width * 2 + 1
             needed_lines = self.maze.height * 2 + 1
             term_cols, term_lines = shutil.get_terminal_size(fallback=(80, 24))
@@ -233,7 +233,7 @@ class AsciiRenderer:
 
     def _handle_regenerate(self) -> None:
         """Generate a new maze with a random seed and display it."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         self.maze.seed = random.randint(0, 2**32)
         self.maze._generated = False
         t0: float = time.time()
@@ -250,27 +250,27 @@ class AsciiRenderer:
 
     def _handle_display(self) -> None:
         """Clear and re-display the maze with the info header."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         self.display(show_path=self.show_path)
         self.header()
 
     def _handle_toggle_path(self) -> None:
         """Toggle the solution path overlay on/off."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         self.show_path = not self.show_path
         self.display(show_path=self.show_path, animate=False)
         self.header()
 
     def _handle_toggle_animation(self) -> None:
         """Toggle the reveal animation on/off."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         self.animate_reveal = not self.animate_reveal
         state = 'enabled' if self.animate_reveal else 'disabled'
         print(f"Reveal animation {state}.\n")
 
     def _handle_rotate_colors(self) -> None:
         """Rotate the wall and corridor colour scheme."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         combinaison = self.c.get_comb()
         idx = random.randint(0, len(combinaison) - 1)
         self.show_path = False
@@ -280,7 +280,7 @@ class AsciiRenderer:
 
     def _handle_cycle_blocked(self) -> None:
         """Cycle the blocked-cell colour to a random scheme."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         combinaison = self.c.get_comb()
         idx = random.randint(0, len(combinaison) - 1)
         self.show_path = False
@@ -310,16 +310,16 @@ class AsciiRenderer:
 
     def _handle_clear(self) -> None:
         """Clear the terminal screen."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
 
     def _handle_help(self) -> None:
         """Display the help screen."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         show_help()
 
     def _handle_info(self) -> None:
         """Show the maze with the info header displayed below."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         temp_delay = self.delay
         if self.show_path:
             self.delay = 0.0
@@ -347,7 +347,7 @@ class AsciiRenderer:
                 return None
             return (int(parts[0]), int(parts[1]), int(parts[2]))
 
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         print(f"┌─── {c.info('Set Custom Colors')} " + "─" * 44)
         print("│")
         print(f"│ {c.info('=== Current Colors ===')}")
@@ -416,7 +416,7 @@ class AsciiRenderer:
             print(Color.error("Play mode requires a terminal.\n"))
             return
 
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         self._last_render_lines = 0
@@ -538,7 +538,7 @@ class AsciiRenderer:
                         steps += 1
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            os.system('clear')
+            subprocess.run(['clear'], check=True)
 
     @staticmethod
     def _build_bar(value: float, max_val: float, width: int = 24) -> str:
@@ -548,7 +548,7 @@ class AsciiRenderer:
 
     def _handle_benchmark(self) -> None:
         """Display detailed maze statistics and performance benchmarks."""
-        os.system('clear')
+        subprocess.run(['clear'], check=True)
 
         seed = self.maze.seed
         w, h = self.maze.width, self.maze.height
@@ -645,7 +645,7 @@ class AsciiRenderer:
         print(f"│   Cells visited:  {self._bfs_visited} / {total_cells}")
         cov_bar = self._build_bar(self._bfs_visited, total_cells, bar_w)
         cov_pct = f"{self._bfs_visited / total_cells * 100:.1f}%"
-        print(f"│   Coverage:       {cov_pct}  {cov_bar}")
+        print(f"│   BFS search scope: {cov_bar}  {cov_pct}")
         print("│")
         print("└" + "─" * 60)
 
@@ -654,7 +654,7 @@ class AsciiRenderer:
     def _handle_invalid(self) -> None:
         """Handle an invalid menu choice and track consecutive errors."""
         if self.count_invalid_inputs >= 4:
-            os.system('clear')
+            subprocess.run(['clear'], check=True)
             self.count_invalid_inputs = 0
         self.count_invalid_inputs += 1
         print(Color.error("Invalid choice.\n"))
@@ -667,11 +667,6 @@ class AsciiRenderer:
             answer = self._menu_prompt()
             if answer is None:
                 break
-            if answer.startswith("-f "):
-                self._force_display = True
-                self.display(show_path=self.show_path)
-                self._force_display = False
-                answer = answer.removeprefix("-f ").strip()
             if answer == "1":
                 self._handle_regenerate()
             elif answer == "2":
@@ -741,7 +736,7 @@ class AsciiRenderer:
 
 def show_help() -> None:
     """Print the full help screen to stdout."""
-    os.system('clear')
+    subprocess.run(['clear'], check=True)
     info = Color.info
     print(f"┌─── {info('A-Maze-ing Help')} " + "─" * 48)
     print("│")

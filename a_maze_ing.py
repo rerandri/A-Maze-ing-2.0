@@ -3,9 +3,8 @@
 Reads a configuration file, generates a maze, saves it to an output
 file, and launches the interactive ASCII renderer.
 """
-
 import sys
-import os
+import subprocess
 from display import AsciiRenderer
 from display.color import Color
 from mazegen import MazeGenerator
@@ -14,7 +13,7 @@ from parser import read_config_file, parse_config
 
 def main(argv: list[str] | None = None) -> None:
     """Generate a maze from a configuration file."""
-    os.system('clear')
+    subprocess.run(['clear'], check=True)
     args = sys.argv if argv is None else argv
     if len(args) != 2:
         print(
